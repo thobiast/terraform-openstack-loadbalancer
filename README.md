@@ -55,7 +55,7 @@ Create a http load balancer:
 ```hcl
 ### Load balancer
 module "openstack-lb" {
-  source            = "../module"
+  source            = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
   name              = "test-http"
   lb_description    = "Test load balancer using terraform module"
   lb_vip_subnet_id  = var.public_subnet_id
@@ -69,7 +69,7 @@ Create a https balance with certificate on backend servers:
 ```hcl
 ### Load balancer
 module "openstack-lb" {
-  source            = "../module"
+  source            = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
   name              = "test-https-backend"
   lb_description    = "Test load balancer using terraform module"
   lb_vip_subnet_id  = var.public_subnet_id
@@ -89,7 +89,7 @@ Create a https balance with certificate stored on the load balancer:
 ```hcl
 ### Load balancer
 module "openstack-lb" {
-  source            = "../module"
+  source            = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
   name              = "test-https-balance"
   lb_description    = "Test load balancer using terraform module"
   lb_vip_subnet_id  = var.public_subnet_id
