@@ -27,11 +27,22 @@ resource "openstack_lb_listener_v2" "listener" {
 }
 
 resource "openstack_lb_monitor_v2" "lb_monitor" {
+  count = var.monitor_tcp == false ? 1 : 0
   name           = "${var.name}-lb_monitor"
   pool_id        = openstack_lb_pool_v2.lb_pool.id
   type           = var.lb_pool_protocol
   url_path       = var.monitor_url_path
   expected_codes = var.monitor_expected_codes
+  delay          = var.monitor_delay
+  timeout        = var.monitor_timeout
+  max_retries    = var.monitor_max_retries
+}
+
+resource "openstack_lb_monitor_v2" "lb_monitor_tcp" {
+  count = var.monitor_tcp == true ? 1 : 0
+  name           = "${var.name}-lb_monitor"
+  pool_id        = openstack_lb_pool_v2.lb_pool.id
+  type           = var.lb_pool_protocol
   delay          = var.monitor_delay
   timeout        = var.monitor_timeout
   max_retries    = var.monitor_max_retries

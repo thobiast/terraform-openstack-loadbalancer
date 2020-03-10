@@ -62,10 +62,15 @@ variable "lb_pool_protocol" {
   default     = "HTTP"
 }
 
-
 ###########
 # Monitor #
 ###########
+variable "monitor_tcp" {
+  description = "Disable url_path and expected_codes if monitor type TCP"
+  type        = bool
+  default     = false
+}
+
 variable "monitor_url_path" {
   description = "Required for HTTP(S) types. URI path that will be accessed if monitor type is HTTP or HTTPS"
   type        = string
