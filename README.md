@@ -1,5 +1,8 @@
 # terraform-openstack-loadbalancer
 
+![Terraform Build](https://github.com/thobiast/terraform-openstack-loadbalancer/workflows/Terraform/badge.svg)
+[![GitHub License](https://img.shields.io/github/license/thobiast/terraform-openstack-loadbalancer)](https://github.com/thobiast/terraform-openstack-loadbalancer/blob/master/LICENSE)
+
 Terraform module to create Load Balancer on OpenStack.
 
 ## Terraform versions
