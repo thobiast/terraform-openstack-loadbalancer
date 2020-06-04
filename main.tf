@@ -26,7 +26,10 @@ resource "openstack_lb_listener_v2" "listener" {
   default_tls_container_ref = var.certificate != "" ? join(",", openstack_keymanager_container_v1.tls.*.container_ref) : ""
 }
 
+### monitor has different parameters to http* and tcp
+### so create the resource based on lb_pool_protocol
 resource "openstack_lb_monitor_v2" "lb_monitor" {
+  count          = var.lb_pool_protocol != "TCP" ? 1 : 0
   name           = "${var.name}-lb_monitor"
   pool_id        = openstack_lb_pool_v2.lb_pool.id
   type           = var.lb_pool_protocol
@@ -35,6 +38,16 @@ resource "openstack_lb_monitor_v2" "lb_monitor" {
   delay          = var.monitor_delay
   timeout        = var.monitor_timeout
   max_retries    = var.monitor_max_retries
+}
+
+resource "openstack_lb_monitor_v2" "lb_monitor_tcp" {
+  count       = var.lb_pool_protocol == "TCP" ? 1 : 0
+  name        = "${var.name}-lb_monitor"
+  pool_id     = openstack_lb_pool_v2.lb_pool.id
+  type        = var.lb_pool_protocol
+  delay       = var.monitor_delay
+  timeout     = var.monitor_timeout
+  max_retries = var.monitor_max_retries
 }
 
 resource "openstack_lb_member_v2" "member" {
