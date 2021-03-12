@@ -7,7 +7,9 @@ Terraform module to create Load Balancer on OpenStack.
 
 ## Terraform versions
 
-It requires terraform version 0.12 or later.
+It requires Terraform version 0.13 or later.
+
+For Terraform v0.11 and v0.12 use version v0.1.\* of this module.
 
 ## Inputs
 
