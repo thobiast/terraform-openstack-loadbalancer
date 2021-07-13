@@ -18,37 +18,71 @@ output "loadbalancer_name" {
   value       = openstack_lb_loadbalancer_v2.loadbalancer.name
 }
 
-output "listener_id" {
-  description = "Listener ID"
-  value       = openstack_lb_listener_v2.listener.id
+output "listeners" {
+  description = "Listener information"
+  value = {
+    for i in openstack_lb_listener_v2.listener :
+    i.name => {
+      "listener_id"   = i.id
+      "protocol"      = i.protocol
+      "protocol_port" = i.protocol_port
+    }
+  }
 }
 
-output "listener_protocol" {
-  description = "Listener protocol"
-  value       = openstack_lb_listener_v2.listener.protocol
+output "lb_pools" {
+  description = "Load balancer pool information"
+  value = {
+    for i in openstack_lb_pool_v2.lb_pool :
+    i.name => {
+      "pool_id"       = i.id
+      "pool_protocol" = i.protocol
+      "lb_method"     = i.lb_method
+    }
+  }
 }
 
-output "listener_protocol_port" {
-  description = "The port on which to listen for client traffic"
-  value       = openstack_lb_listener_v2.listener.protocol_port
+output "monitor_http" {
+  description = "Load balancer HTTP like monitor information"
+  value = {
+    for i in openstack_lb_monitor_v2.lb_monitor :
+    i.name => {
+      "id"             = i.id
+      "pool_id"        = i.pool_id
+      "type"           = i.type
+      "delay"          = i.delay
+      "timeout"        = i.timeout
+      "max_retries"    = i.max_retries
+      "expected_codes" = i.expected_codes
+      "url_path"       = i.url_path
+    }
+  }
 }
 
-output "lb_pool_id" {
-  description = "Load balancer pool ID"
-  value       = openstack_lb_pool_v2.lb_pool.id
+output "monitor_tcp" {
+  description = "Load balancer TCP monitor information"
+  value = {
+    for i in openstack_lb_monitor_v2.lb_monitor_tcp :
+    i.name => {
+      "id"          = i.id
+      "pool_id"     = i.pool_id
+      "type"        = i.type
+      "delay"       = i.delay
+      "timeout"     = i.timeout
+      "max_retries" = i.max_retries
+    }
+  }
 }
 
-output "member_port" {
-  description = "The port on which to listen for client traffic"
-  value = join(",",
-    distinct([for member in openstack_lb_member_v2.member : member.protocol_port])
-  )
-}
-
-output "member_address" {
-  description = "The IP address of the member to receive traffic from the load balancer"
-  value = join(",",
-    [for member in openstack_lb_member_v2.member :
-    member.address]
-  )
+output "members" {
+  description = "Member(s) information"
+  value = {
+    for i in openstack_lb_members_v2.members :
+    i.pool_id => {
+      "id"    = [for k in i.member : k["id"]]
+      "names" = [for k in i.member : k["name"]]
+      "ips"   = [for k in i.member : k["address"]]
+      "port"  = join(",", distinct([for k in i.member : k["protocol_port"]]))
+    }
+  }
 }
