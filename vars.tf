@@ -16,8 +16,15 @@ variable "lb_description" {
 }
 
 variable "lb_vip_subnet_id" {
-  description = "The network on which to allocate the Loadbalancer's address"
+  description = "The network's subnet on which to allocate the Loadbalancer's address"
   type        = string
+  default     = null
+}
+
+variable "lb_vip_port_id" {
+  description = "The network's port on which want to connect the loadbalancer"
+  type        = string
+  default     = null
 }
 
 variable "lb_security_group_ids" {

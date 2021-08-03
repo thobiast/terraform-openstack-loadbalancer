@@ -5,6 +5,7 @@ resource "openstack_lb_loadbalancer_v2" "loadbalancer" {
   name               = "${var.name}-loadbalancer"
   description        = var.lb_description
   vip_subnet_id      = var.lb_vip_subnet_id
+  vip_port_id        = var.lb_vip_port_id
   security_group_ids = var.lb_security_group_ids
   admin_state_up     = "true"
 }
