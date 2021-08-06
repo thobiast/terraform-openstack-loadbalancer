@@ -1,0 +1,8 @@
+export OS_AUTH_URL=
+export OS_USERNAME=
+export OS_PASSWORD=
+export OS_DOMAIN_NAME=
+export OS_TENANT_NAME=
+export TF_VAR_instance=
+export TF_VAR_private_network=
+export TF_VAR_public_network=
