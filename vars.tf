@@ -33,6 +33,12 @@ variable "lb_security_group_ids" {
   default     = []
 }
 
+variable "lb_flavor_id" {
+  description = "Loadbalancer flavor (HA, stand-alone)"
+  type        = string
+  default     = null
+}
+
 ################
 ## Listener(s) #
 ################

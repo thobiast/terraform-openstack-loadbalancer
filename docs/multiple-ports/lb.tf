@@ -20,6 +20,7 @@ module "openstack-lb" {
   lb_description        = "Test load balancer with multiple listeners"
   lb_security_group_ids = []
   lb_vip_subnet_id      = data.openstack_networking_subnet_v2.customer_network_subnet.id
+  lb_flavor_id          = var.flavor
   listeners = {
     https_lb1 = {
       listener_protocol      = "TCP"
