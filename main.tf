@@ -49,13 +49,17 @@ resource "openstack_lb_listener_v2" "listener" {
   default_pool_id           = openstack_lb_pool_v2.lb_pool[each.key].id
 }
 
+locals {
+  non_http = ["TCP", "PROXY"]
+}
+
 #########################
 ### Create monitor(s) ###
 #########################
 # monitor has different parameters to http* and tcp
 # Create non TCP monitor
 resource "openstack_lb_monitor_v2" "lb_monitor" {
-  for_each = { for k, r in var.listeners : k => r if r["lb_pool_protocol"] != "TCP" }
+  for_each = { for k, r in var.listeners : k => r if !contains(local.non_http, r["lb_pool_protocol"]) }
 
   pool_id          = openstack_lb_pool_v2.lb_pool[each.key].id
   name             = lookup(each.value, "monitor_name", format("%s-%s-%s", var.name, each.key, "lb_monitor"))
@@ -70,11 +74,11 @@ resource "openstack_lb_monitor_v2" "lb_monitor" {
 
 # Create TCP monitor
 resource "openstack_lb_monitor_v2" "lb_monitor_tcp" {
-  for_each = { for k, r in var.listeners : k => r if r["lb_pool_protocol"] == "TCP" }
+  for_each = { for k, r in var.listeners : k => r if contains(local.non_http, r["lb_pool_protocol"]) }
 
   pool_id          = openstack_lb_pool_v2.lb_pool[each.key].id
   name             = lookup(each.value, "monitor_name", format("%s-%s-%s", var.name, each.key, "lb_monitor"))
-  type             = lookup(each.value, "lb_pool_protocol", var.def_values.lb_pool_protocol)
+  type             = lookup(each.value, "listener_protocol", var.def_values.listener_protocol)
   delay            = lookup(each.value, "monitor_delay", var.def_values.monitor_delay)
   timeout          = lookup(each.value, "monitor_timeout", var.def_values.monitor_timeout)
   max_retries      = lookup(each.value, "monitor_max_retries", var.def_values.monitor_max_retries)
