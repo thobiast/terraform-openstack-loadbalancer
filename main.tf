@@ -59,7 +59,7 @@ locals {
 # monitor has different parameters to http* and tcp
 # Create non TCP monitor
 resource "openstack_lb_monitor_v2" "lb_monitor" {
-  for_each = { for k, r in var.listeners : k => r if !contains(local.non_http, r["lb_pool_protocol"]) }
+  for_each = { for k, r in var.listeners : k => r if ! contains(local.non_http, r["lb_pool_protocol"]) }
 
   pool_id          = openstack_lb_pool_v2.lb_pool[each.key].id
   name             = lookup(each.value, "monitor_name", format("%s-%s-%s", var.name, each.key, "lb_monitor"))
