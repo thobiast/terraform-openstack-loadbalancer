@@ -11,30 +11,61 @@ It requires Terraform version 0.13 or later.
 
 For Terraform v0.11 and v0.12 use version v0.1.\* of this module.
 
+Version 2.0 supports multiple listeners and Breaks Backwards Compatibility. If you are using the previous version, please use the *"version = 1.0.0"*.
+
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |:-----|:------------|:----:|:-------:|:--------:|
-|name  | Name to prefix all resources created on OpenStack | string | - | **yes** |
+|lb_name  | Human-readable name for the Loadbalancer | string | - | **yes** |
 |lb_description  | Human-readable description for the Loadbalancer | string | `-` | no |
-|lb_vip_subnet_id  | The network on which to allocate the Loadbalancer's address | string | - | **yes** |
+|lb_vip_subnet_id  | The network's subnet on which to allocate the Loadbalancer's address | string | `null` | no |
+|lb_vip_network_id  | The network on which to allocate the Loadbalancer's address | string | `null` | no |
+|lb_vip_port_id  | The network's port on which want to connect the loadbalancer | string | `null` | no |
+|lb_vip_address  | The ip address of the load balancer | string | `null` | no |
+|lb_loadbalancer_provider  | The name of the provider | string | `null` | no |
+|lb_availability_zone  | The availability zone of the Loadbalancer | string | `null` | no |
 |lb_security_group_ids  | A list of security group IDs to apply to the loadbalancer | list(string) | `[]` | no |
-|listener_protocol  | The protocol - can either be TCP, HTTP, HTTPS or TERMINATED_HTTPS | string | `HTTP` | no |
-|listener_protocol_port  | The port on which to listen for client traffic | string | `80` | no |
-|listener_connection_limit  | The maximum number of connections allowed for the Listener | string | `-1` | no |
-|lb_pool_method  | The load balancing algorithm to distribute traffic to the pool's members. Must be one of ROUND_ROBIN, LEAST_CONNECTIONS, or SOURCE_IP | string | `ROUND_ROBIN` | no |
-|lb_pool_protocol  | The protocol - can either be TCP, HTTP, HTTPS or PROXY | string | `HTTP` | no |
-|monitor_url_path  | Required for HTTP(S) types. URI path that will be accessed if monitor type is HTTP or HTTPS | string | `/` | no |
-|monitor_expected_codes  | Required for HTTP(S) types. Expected HTTP codes for a passing HTTP(S) monitor. You can either specify a single status like 200, or a range like 200-202 | string | `200` | no |
-|monitor_delay  | The time, in seconds, between sending probes to members | string | `20` | no |
-|monitor_timeout  | Maximum number of seconds for a monitor to wait for a ping reply before it times out | string | `10` | no |
-|monitor_max_retries  | Number of permissible ping failures before changing the member's status to INACTIVE. Must be a number between 1 and 10 | string | `5` | no |
-|member_port  | The port on which to listen for client traffic | string | `80` | no |
-|member_address  | The IP addresses of the member to receive traffic from the load balancer | list(string) | - | **yes** |
-|member_subnet_id  | The subnet in which to access the member | string | `-` | no |
-|certificate  | The certificate data to be stored. (file_name) | string | `-` | no |
-|private_key  | The private key data to be stored. (file_name) | string | `-` | no |
-|certificate_intermediate  | The intermediate certificate data to be stored. (file_name) | string | `-` | no |
+|lb_flavor_id  | Loadbalancer flavor (HA, stand-alone) | string | `null` | no |
+|listeners  | Map with Listener(s) to create | map(object) | - | **yes** |
+
+
+**Listener map structure**
+
+| Name | Description | Type | Default | Required |
+|:-----|:------------|:----:|:-------:|:--------:|
+| listener_name                     | Human-readable name for the Listener | optional(string) | - | no |
+| listener_description              | Human-readable description for the Listener | optional(string) | - | no |
+| listener_protocol                 | The protocol - can either be TCP,HTTP,HTTPS,TERMINATED_HTTPS,UDP,SCTP | string | - | **yes** |
+| listener_protocol_port            | The port on which to listen for client traffic | string | - | **yes** |
+| listener_connection_limit         | The maximum number of connections allowed for the Listener | optional(string) | - | no |
+| listener_timeout_client_data      | The client inactivity timeout in milliseconds | optional(string) | | no |
+| listener_timeout_member_connect   | The member connection timeout in milliseconds | optional(string) | - | no |
+| listener_timeout_member_data      | The member inactivity timeout in milliseconds | optional(string) | - | no |
+| listener_timeout_tcp_inspect      | The time in milliseconds, to wait for additional TCP packets for content inspection | optional(string) | - | no |
+| listener_tls_container_ref        | A reference to a Barbican Secrets container which stores TLS information. This is required if the protocol is TERMINATED_HTTPS | optional(string) | - | no |
+| listener_sni_container_refs       | A list of references to Barbican Secrets containers which store SNI information | optional(list(string)) | - | no |
+| listener_insert_headers           | The list of key value pairs representing headers to insert into the request before it is sent to the backend members | optional(map(string)) | - | no |
+| listener_allowed_cidrs            | A list of CIDR blocks that are permitted to connect to this listener, denying all other source addresses. If not present, defaults to allow all | optional(list(string)) | - | no |
+| pool_name                         | Human-readable name for the pool | optional(string) | - | no |
+| pool_description                  | Human-readable description for the pool | optional(string) | - | no |
+| pool_protocol                     | The protocol - can either be TCP,HTTP,HTTPS,PROXY,PROXYV2,UDP,SCTP | string | - | **yes** |
+| pool_method                       | The load balancing algorithm to distribute traffic to the pool's members. Must be one of ROUND_ROBIN,LEAST_CONNECTIONS,SOURCE_IP,SOURCE_IP_PORT | optional(string) | `ROUND_ROBIN` | no |
+| pool_sess_persistence_type        | The type of persistence mode. The current specification supports SOURCE_IP,HTTP_COOKIE,APP_COOKIE | optional(string) | - | no |
+| pool_sess_persistence_cookie_name | The name of the cookie if persistence mode is set appropriately. Required if type = APP_COOKIE | optional(string) | - | no |
+| monitor_name                      | The Name of the Monitor | optional(string) | - | no |
+| monitor_type                      | The health monitor type. Supported values PING,HTTP,TCP,HTTPS,TLS-HELLO,UDP-CONNECT,SCTP | string | - | **yes** |
+| monitor_delay                     | The time, in seconds, between sending probes to members | optional(string) | `10`| no |
+| monitor_timeout                   | Maximum number of seconds for a monitor to wait for a ping reply before it times out. The value must be less than the delay value | optional(string) | `5` | no |
+| monitor_max_retries               | Number of permissible ping failures before changing the member's status to INACTIVE. Must be a number between 1 and 10 | optional(string) | `3` | no |
+| monitor_max_retries_down          | Number of permissible ping failures befor changing the member's status to ERROR. Must be a number between 1 and 10 | optional(string) | - | no |
+| monitor_url_path                  | Required for HTTP(S) types. URI path that will be accessed if monitor type is HTTP or HTTPS | optional(string) | - | no |
+| monitor_http_method               | Required for HTTP(S) types. The HTTP method used for requests by the monitor. If this attribute is not specified, it defaults to "GET" | optional(string) | - | no |
+| monitor_expected_codes            | Required for HTTP(S) types. Expected HTTP codes for a passing HTTP(S) monitor. You can either specify a single status like "200", or a range like "200-202" | optional(string) | - | no |
+| member_address                    | The IP address of the members to receive traffic from the load balancer | optional(list(string)) | - | no |
+| member_name                       | Human-readable name for the member | optional(list(string)) | - | no |
+| member_subnet_id                  | The subnet in which to access the member | optional(string) | - | no |
+| member_port                       | The port on which to listen for client traffic | optional(string) | - | no |
 
 
 ## Outputs
@@ -45,68 +76,120 @@ For Terraform v0.11 and v0.12 use version v0.1.\* of this module.
 | loadbalancer_ip | Load balancer IP address |
 | loadbalancer_vip_port_id | The Port ID of the Load Balancer IP |
 | loadbalancer_name | Human-readable name for the Loadbalancer |
-| listener_id | Listener ID |
-| listener_protocol | Listener protocol |
-| listener_protocol_port | The port on which to listen for client traffic |
-| lb_pool_id | Load balancer pool ID |
-| member_port | The port on which to listen for client traffic |
-| member_address | The IP address of the member to receive traffic from the load balancer |
+| loadbalancer | Loadbalancer information |
+| listeners | Listeners information |
+| pools | Load balancer pool information |
+| monitor | Load balancer monitor information |
+| members | Member(s) information |
 
 
 ## Usage example
 
-Create a http load balancer:
+Create a load balancer with one listener HTTP:
 
 ```hcl
 ### Load balancer
 module "openstack-lb" {
-  source            = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
-  name              = "test-http"
-  lb_description    = "Test load balancer using terraform module"
-  lb_vip_subnet_id  = var.public_subnet_id
-  member_address    = openstack_compute_instance_v2.myinstances[*].access_ip_v4
-  member_subnet_id  = var.private_subnet_id
+  source                = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
+  lb_name               = "test-http"
+  lb_description        = "Test load balancer using terraform module"
+  lb_security_group_ids = [openstack_networking_secgroup_v2.my_lb.id]
+  lb_vip_subnet_id      = var.public_subnet_id
+  listeners = {
+    http = {
+      listener_name          = "My Listener HTTP"
+      listener_protocol      = "HTTP"
+      listener_protocol_port = 80
+      pool_protocol          = "HTTP"
+      monitor_type           = "HTTP"
+      member_address         = openstack_compute_instance_v2.http[*].access_ip_v4
+      member_name            = openstack_compute_instance_v2.http[*].name
+      member_port            = 80
+    }
+  }
 }
 ```
 
-Create a https balance with certificate on backend servers:
+Create a load balancer with one listener HTTP and other TCP.
 
 ```hcl
 ### Load balancer
 module "openstack-lb" {
-  source            = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
-  name              = "test-https-backend"
-  lb_description    = "Test load balancer using terraform module"
-  lb_vip_subnet_id  = var.public_subnet_id
-
-  listener_protocol      = "HTTPS"
-  listener_protocol_port = "443"
-
-  lb_pool_protocol  = "HTTPS"
-  member_port       = "443"
-  member_address    = openstack_compute_instance_v2.myinstances[*].access_ip_v4
-  member_subnet_id  = var.private_subnet_id
+  source                = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
+  lb_name               = "Test load balancer with multiple listeners"
+  lb_description        = "Test load balancer using terraform module"
+  lb_security_group_ids = [openstack_networking_secgroup_v2.my_lb.id]
+  lb_vip_subnet_id      = module.openstack-env.public_subnet_id
+  listeners = {
+    http = {
+      listener_name                     = "My Listener HTTP"
+      listener_protocol                 = "HTTP"
+      listener_protocol_port            = 80
+      listener_insert_headers           = { X-Forwarded-For = "true" }
+      pool_protocol                     = "HTTP"
+      pool_method                       = "SOURCE_IP"
+      pool_sess_persistence_type        = "APP_COOKIE"
+      pool_sess_persistence_cookie_name = "testCookie"
+      monitor_type                      = "HTTP"
+      monitor_delay                     = 7
+      monitor_timeout                   = 5
+      monitor_max_retries               = 3
+      monitor_url_path                  = "/healthcheck"
+      monitor_expected_codes            = "200-201"
+      member_address                    = openstack_compute_instance_v2.http[*].access_ip_v4
+      member_name                       = openstack_compute_instance_v2.http[*].name
+      member_port                       = 80
+    },
+    tcp = {
+      listener_name          = "my listener TCP"
+      listener_protocol      = "TCP"
+      listener_protocol_port = 22
+      listener_allowed_cidrs = ["192.168.2.0/24"]
+      pool_name              = "My TCP pool"
+      pool_protocol          = "TCP"
+      pool_method            = "SOURCE_IP"
+      monitor_type           = "TCP"
+      member_address         = openstack_compute_instance_v2.ssh[*].access_ip_v4
+      member_name            = openstack_compute_instance_v2.ssh[*].name
+      member_port            = 22
+    }
+  }
 }
 ```
 
-Create a https balance with certificate stored on the load balancer:
+Create a load balancer with one listener HTTP and one HTTPS with TLS certificate stored on the load balancer.
 
 ```hcl
 ### Load balancer
 module "openstack-lb" {
-  source            = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
-  name              = "test-https-balance"
-  lb_description    = "Test load balancer using terraform module"
-  lb_vip_subnet_id  = var.public_subnet_id
-
-  listener_protocol      = "TERMINATED_HTTPS"
-  listener_protocol_port = "443"
-  certificate            = "my_certificate_file.crt"
-  private_key            = "my_private_key_file.key"
-
-  lb_pool_protocol  = "HTTP"
-  member_port       = "80"
-  member_address    = openstack_compute_instance_v2.myinstances[*].access_ip_v4
-  member_subnet_id  = var.private_subnet_id
+  source                = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
+  lb_name               = "Test load balancer with multiple listeners"
+  lb_description        = "Test load balancer using terraform module"
+  lb_security_group_ids = [openstack_networking_secgroup_v2.my_lb.id]
+  lb_vip_subnet_id      = module.openstack-env.public_subnet_id
+  listeners = {
+    http = {
+      listener_name          = "My Listener HTTP"
+      listener_protocol      = "HTTP"
+      listener_protocol_port = 80
+      pool_protocol          = "HTTP"
+      monitor_type           = "HTTP"
+      member_address         = openstack_compute_instance_v2.http[*].access_ip_v4
+      member_name            = openstack_compute_instance_v2.http[*].name
+      member_port            = 80
+    },
+    https = {
+      listener_name              = "My Listener HTTPS"
+      listener_protocol          = "TERMINATED_HTTPS"
+      listener_protocol_port     = 443
+      listener_tls_container_ref = openstack_keymanager_container_v1.tls_1.container_ref
+      pool_name                  = "Pool HTTP"
+      pool_protocol              = "HTTP"
+      monitor_type               = "HTTP"
+      member_address             = openstack_compute_instance_v2.http[*].access_ip_v4
+      member_name                = openstack_compute_instance_v2.http[*].name
+      member_port                = 80
+    }
+  }
 }
 ```

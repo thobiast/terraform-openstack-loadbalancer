@@ -18,71 +18,27 @@ output "loadbalancer_name" {
   value       = openstack_lb_loadbalancer_v2.loadbalancer.name
 }
 
+output "loadbalancer" {
+  description = "Loadbalancer information"
+  value       = openstack_lb_loadbalancer_v2.loadbalancer
+}
+
 output "listeners" {
-  description = "Listener information"
-  value = {
-    for i in openstack_lb_listener_v2.listener :
-    i.name => {
-      "listener_id"   = i.id
-      "protocol"      = i.protocol
-      "protocol_port" = i.protocol_port
-    }
-  }
+  description = "Listeners information"
+  value       = openstack_lb_listener_v2.lb_listener
 }
 
-output "lb_pools" {
+output "pools" {
   description = "Load balancer pool information"
-  value = {
-    for i in openstack_lb_pool_v2.lb_pool :
-    i.name => {
-      "pool_id"       = i.id
-      "pool_protocol" = i.protocol
-      "lb_method"     = i.lb_method
-    }
-  }
+  value       = openstack_lb_pool_v2.lb_pool
 }
 
-output "monitor_http" {
-  description = "Load balancer HTTP like monitor information"
-  value = {
-    for i in openstack_lb_monitor_v2.lb_monitor :
-    i.name => {
-      "id"             = i.id
-      "pool_id"        = i.pool_id
-      "type"           = i.type
-      "delay"          = i.delay
-      "timeout"        = i.timeout
-      "max_retries"    = i.max_retries
-      "expected_codes" = i.expected_codes
-      "url_path"       = i.url_path
-    }
-  }
-}
-
-output "monitor_tcp" {
-  description = "Load balancer TCP monitor information"
-  value = {
-    for i in openstack_lb_monitor_v2.lb_monitor_tcp :
-    i.name => {
-      "id"          = i.id
-      "pool_id"     = i.pool_id
-      "type"        = i.type
-      "delay"       = i.delay
-      "timeout"     = i.timeout
-      "max_retries" = i.max_retries
-    }
-  }
+output "monitor" {
+  description = "Load balancer monitor information"
+  value       = openstack_lb_monitor_v2.lb_monitor
 }
 
 output "members" {
   description = "Member(s) information"
-  value = {
-    for i in openstack_lb_members_v2.members :
-    i.pool_id => {
-      "id"    = [for k in i.member : k["id"]]
-      "names" = [for k in i.member : k["name"]]
-      "ips"   = [for k in i.member : k["address"]]
-      "port"  = join(",", distinct([for k in i.member : k["protocol_port"]]))
-    }
-  }
+  value       = openstack_lb_members_v2.members
 }
