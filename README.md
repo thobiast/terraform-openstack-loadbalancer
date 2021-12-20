@@ -27,6 +27,7 @@ Version 2.0 supports multiple listeners and Breaks Backwards Compatibility. If y
 |lb_availability_zone  | The availability zone of the Loadbalancer | string | `null` | no |
 |lb_security_group_ids  | A list of security group IDs to apply to the loadbalancer | list(string) | `[]` | no |
 |lb_flavor_id  | Loadbalancer flavor (HA, stand-alone) | string | `null` | no |
+|tags  | A list of strings to add to the load balancer | list(string) | `[]` | no |
 |listeners  | Map with Listener(s) to create | map(object) | - | **yes** |
 
 

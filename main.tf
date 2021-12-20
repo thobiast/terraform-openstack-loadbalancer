@@ -12,6 +12,7 @@ resource "openstack_lb_loadbalancer_v2" "loadbalancer" {
   availability_zone     = var.lb_availability_zone
   security_group_ids    = var.lb_security_group_ids
   flavor_id             = var.lb_flavor_id
+  tags                  = var.tags
   admin_state_up        = "true"
 }
 

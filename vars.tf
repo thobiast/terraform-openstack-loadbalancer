@@ -60,6 +60,12 @@ variable "lb_flavor_id" {
   default     = null
 }
 
+variable "tags" {
+  description = "A list of strings to add to the load balancer"
+  type        = list(string)
+  default     = []
+}
+
 ################
 ## Listener(s) #
 ################
