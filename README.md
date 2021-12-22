@@ -124,7 +124,7 @@ module "openstack-lb" {
       listener_protocol_port = 80
       pool_protocol          = "HTTP"
       monitor_type           = "HTTP"
-	  members                = local.members
+      members                = local.members
     }
   }
 }
@@ -176,7 +176,7 @@ module "openstack-lb" {
       monitor_max_retries               = 3
       monitor_url_path                  = "/healthcheck"
       monitor_expected_codes            = "200-201"
-	  members                           = local.members_http
+      members                           = local.members_http
     },
     tcp = {
       listener_name          = "my listener TCP"
@@ -187,7 +187,7 @@ module "openstack-lb" {
       pool_protocol          = "TCP"
       pool_method            = "SOURCE_IP"
       monitor_type           = "TCP"
-	  members                = local.members_tcp
+      members                = local.members_tcp
     }
   }
 }
@@ -222,7 +222,7 @@ module "openstack-lb" {
       listener_protocol_port = 80
       pool_protocol          = "HTTP"
       monitor_type           = "HTTP"
-	  members                = local.members_http
+      members                = local.members_http
     },
     https = {
       listener_name              = "My Listener HTTPS"
@@ -232,7 +232,7 @@ module "openstack-lb" {
       pool_name                  = "Pool HTTP"
       pool_protocol              = "HTTP"
       monitor_type               = "HTTP"
-	  members                    = local.members_http
+      members                    = local.members_http
     }
   }
 }
