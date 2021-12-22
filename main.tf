@@ -86,18 +86,20 @@ resource "openstack_lb_monitor_v2" "lb_monitor" {
 ### Add member(s) to pool(s) ###
 #################################
 resource "openstack_lb_members_v2" "members" {
-  for_each = local.listeners
+  # Only create resource if there are members
+  for_each = { for k, v in local.listeners : k => v if length(v.members) != 0 }
 
   pool_id = openstack_lb_pool_v2.lb_pool[each.key].id
 
   dynamic "member" {
-    # If member_name is specified, it creates a map name: ip, otherwise ip: ip
-    for_each = contains(keys(each.value), "member_name") ? zipmap(each.value.member_name, each.value.member_address) : zipmap(each.value.member_address, each.value.member_address)
+    for_each = each.value.members
     content {
-      name          = member.key
-      address       = member.value
-      subnet_id     = each.value.member_subnet_id
-      protocol_port = each.value.member_port
+      address       = member.value.address
+      protocol_port = member.value.protocol_port
+      subnet_id     = member.value.subnet_id
+      name          = member.value.name
+      weight        = member.value.weight
+      backup        = member.value.backup
     }
   }
 }

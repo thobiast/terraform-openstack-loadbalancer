@@ -100,10 +100,14 @@ variable "listeners" {
     monitor_url_path                  = optional(string)
     monitor_http_method               = optional(string)
     monitor_expected_codes            = optional(string)
-    member_address                    = optional(list(string))
-    member_name                       = optional(list(string))
-    member_subnet_id                  = optional(string)
-    member_port                       = optional(string)
+    members = optional(list(object({
+      address       = string,
+      protocol_port = number,
+      subnet_id     = optional(string),
+      name          = optional(string),
+      weight        = optional(number),
+      backup        = optional(bool),
+    })))
   }))
 }
 

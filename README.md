@@ -63,10 +63,19 @@ Version 2.0 supports multiple listeners and Breaks Backwards Compatibility. If y
 | monitor_url_path                  | Required for HTTP(S) types. URI path that will be accessed if monitor type is HTTP or HTTPS | optional(string) | - | no |
 | monitor_http_method               | Required for HTTP(S) types. The HTTP method used for requests by the monitor. If this attribute is not specified, it defaults to "GET" | optional(string) | - | no |
 | monitor_expected_codes            | Required for HTTP(S) types. Expected HTTP codes for a passing HTTP(S) monitor. You can either specify a single status like "200", or a range like "200-202" | optional(string) | - | no |
-| member_address                    | The IP address of the members to receive traffic from the load balancer | optional(list(string)) | - | no |
-| member_name                       | Human-readable name for the member | optional(list(string)) | - | no |
-| member_subnet_id                  | The subnet in which to access the member | optional(string) | - | no |
-| member_port                       | The port on which to listen for client traffic | optional(string) | - | no |
+| members                           | List with members to receive traffic from the load balancer | optional(list(object)) | `[]` | no |
+
+
+**members map structure**
+
+| Name | Description | Type | Default | Required |
+|:-----|:------------|:----:|:-------:|:--------:|
+| address       | The IP address of the member to receive traffic from the load balancer | string | - | **yes** |
+| name          | Human-readable name for the member | string | - | no |
+| protocol_port | The port on which to listen for client traffic | string | - | **yes** |
+| subnet_id     | The subnet in which to access the member | string | - | no |
+| weight        | A positive integer value that indicates the relative portion of traffic that this members should receive from the pool | string | `1` | no |
+| backup        | A bool that indicates whether the member is backup | `false` | no |
 
 
 ## Outputs
@@ -89,6 +98,18 @@ Version 2.0 supports multiple listeners and Breaks Backwards Compatibility. If y
 Create a load balancer with one listener HTTP:
 
 ```hcl
+### Creates list with members structure
+### Instances created using resource openstack_compute_instance_v2.http
+locals {
+  members = [
+    for instance in openstack_compute_instance_v2.http[*] : {
+      address       = instance.access_ip_v4
+      name          = instance.name
+      protocol_port = 80
+    }
+  ]
+}
+
 ### Load balancer
 module "openstack-lb" {
   source                = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
@@ -103,9 +124,7 @@ module "openstack-lb" {
       listener_protocol_port = 80
       pool_protocol          = "HTTP"
       monitor_type           = "HTTP"
-      member_address         = openstack_compute_instance_v2.http[*].access_ip_v4
-      member_name            = openstack_compute_instance_v2.http[*].name
-      member_port            = 80
+	  members                = local.members
     }
   }
 }
@@ -114,6 +133,26 @@ module "openstack-lb" {
 Create a load balancer with one listener HTTP and other TCP.
 
 ```hcl
+### Creates list with members structure
+### Instances http created using resource openstack_compute_instance_v2.http
+### Instances ssh created using resource openstack_compute_instance_v2.ssh
+locals {
+  members_http = [
+    for instance in openstack_compute_instance_v2.http[*] : {
+      address       = instance.access_ip_v4
+      name          = instance.name
+      protocol_port = 80
+    }
+  ]
+  members_tcp = [
+    for instance in openstack_compute_instance_v2.ssh[*] : {
+      address       = instance.access_ip_v4
+      name          = instance.name
+      protocol_port = 22
+    }
+  ]
+}
+
 ### Load balancer
 module "openstack-lb" {
   source                = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
@@ -137,9 +176,7 @@ module "openstack-lb" {
       monitor_max_retries               = 3
       monitor_url_path                  = "/healthcheck"
       monitor_expected_codes            = "200-201"
-      member_address                    = openstack_compute_instance_v2.http[*].access_ip_v4
-      member_name                       = openstack_compute_instance_v2.http[*].name
-      member_port                       = 80
+	  members                           = local.members_http
     },
     tcp = {
       listener_name          = "my listener TCP"
@@ -150,9 +187,7 @@ module "openstack-lb" {
       pool_protocol          = "TCP"
       pool_method            = "SOURCE_IP"
       monitor_type           = "TCP"
-      member_address         = openstack_compute_instance_v2.ssh[*].access_ip_v4
-      member_name            = openstack_compute_instance_v2.ssh[*].name
-      member_port            = 22
+	  members                = local.members_tcp
     }
   }
 }
@@ -161,6 +196,18 @@ module "openstack-lb" {
 Create a load balancer with one listener HTTP and one HTTPS with TLS certificate stored on the load balancer.
 
 ```hcl
+### Creates list with members structure
+### Instances created using resource openstack_compute_instance_v2.http
+locals {
+  members_http = [
+    for instance in openstack_compute_instance_v2.http[*] : {
+      address       = instance.access_ip_v4
+      name          = instance.name
+      protocol_port = 80
+    }
+  ]
+}
+
 ### Load balancer
 module "openstack-lb" {
   source                = "git::https://github.com/thobiast/terraform-openstack-loadbalancer.git"
@@ -175,9 +222,7 @@ module "openstack-lb" {
       listener_protocol_port = 80
       pool_protocol          = "HTTP"
       monitor_type           = "HTTP"
-      member_address         = openstack_compute_instance_v2.http[*].access_ip_v4
-      member_name            = openstack_compute_instance_v2.http[*].name
-      member_port            = 80
+	  members                = local.members_http
     },
     https = {
       listener_name              = "My Listener HTTPS"
@@ -187,9 +232,7 @@ module "openstack-lb" {
       pool_name                  = "Pool HTTP"
       pool_protocol              = "HTTP"
       monitor_type               = "HTTP"
-      member_address             = openstack_compute_instance_v2.http[*].access_ip_v4
-      member_name                = openstack_compute_instance_v2.http[*].name
-      member_port                = 80
+	  members                    = local.members_http
     }
   }
 }
