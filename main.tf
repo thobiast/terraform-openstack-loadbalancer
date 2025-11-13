@@ -10,96 +10,167 @@ resource "openstack_lb_loadbalancer_v2" "loadbalancer" {
   vip_address           = var.lb_vip_address
   loadbalancer_provider = var.lb_loadbalancer_provider
   availability_zone     = var.lb_availability_zone
-  security_group_ids    = var.lb_security_group_ids
   flavor_id             = var.lb_flavor_id
+  vip_qos_policy_id     = var.lb_vip_qos_policy_id
   tags                  = var.tags
-  admin_state_up        = "true"
+  admin_state_up        = var.admin_state_up
+
+  lifecycle {
+    precondition {
+      condition     = length(local._bad_default_pool_refs) == 0
+      error_message = "listeners[*].default_pool_key must match a key in var.pools: ${join(", ", local._bad_default_pool_refs)}"
+    }
+    precondition {
+      condition     = length(local._bad_redirect_policies) == 0
+      error_message = "L7policies with action=REDIRECT_TO_POOL have invalid redirect_pool_key references: ${join(", ", local._bad_redirect_policies)}"
+    }
+    precondition {
+      condition     = length(local._bad_listener_refs_in_policies) == 0
+      error_message = "Each l7_policies[*].listener_key must match a key in var.listeners: ${join(", ", local._bad_listener_refs_in_policies)}"
+    }
+  }
 }
 
 
 ######################
 ### Create pool(s) ###
 ######################
-resource "openstack_lb_pool_v2" "lb_pool" {
-  for_each = local.listeners
+resource "openstack_lb_pool_v2" "pool" {
+  for_each    = var.pools
+  name        = coalesce(try(each.value.name, null), format("lb:%s pool:%s", var.lb_name, each.key))
+  description = try(each.value.description, null)
+  protocol    = upper(each.value.protocol)
+  lb_method   = upper(each.value.lb_method)
 
-  description     = each.value.pool_description != null ? each.value.pool_description : format("LB: %s listener: %s", var.lb_name, each.key)
-  name            = each.value.pool_name != null ? each.value.pool_name : format("%s - %s", var.lb_name, each.key)
-  protocol        = each.value.pool_protocol
-  lb_method       = each.value.pool_method
   loadbalancer_id = openstack_lb_loadbalancer_v2.loadbalancer.id
 
   dynamic "persistence" {
-    for_each = each.value.pool_sess_persistence_type == null ? [] : [true]
+    for_each = each.value.persistence == null ? [] : [each.value.persistence]
     content {
-      type        = each.value.pool_sess_persistence_type
-      cookie_name = each.value.pool_sess_persistence_cookie_name
+      type        = upper(persistence.value.type)
+      cookie_name = try(persistence.value.cookie_name, null)
     }
   }
 }
 
-##########################
-### Create listener(s) ###
-##########################
-resource "openstack_lb_listener_v2" "lb_listener" {
-  for_each = local.listeners
 
-  description               = each.value.listener_description != null ? each.value.listener_description : format("LB: %s listener: %s", var.lb_name, each.key)
-  name                      = each.value.listener_name != null ? each.value.listener_name : format("%s-%s-%s", var.lb_name, "listener", each.key)
-  protocol                  = each.value.listener_protocol
-  protocol_port             = each.value.listener_protocol_port
-  connection_limit          = each.value.listener_connection_limit
-  timeout_client_data       = each.value.listener_timeout_client_data
-  timeout_member_connect    = each.value.listener_timeout_member_connect
-  timeout_member_data       = each.value.listener_timeout_member_data
-  timeout_tcp_inspect       = each.value.listener_timeout_tcp_inspect
-  default_tls_container_ref = each.value.listener_tls_container_ref
-  sni_container_refs        = each.value.listener_sni_container_refs
-  insert_headers            = each.value.listener_insert_headers
-  allowed_cidrs             = each.value.listener_allowed_cidrs
-  loadbalancer_id           = openstack_lb_loadbalancer_v2.loadbalancer.id
-  default_pool_id           = openstack_lb_pool_v2.lb_pool[each.key].id
-  admin_state_up            = "true"
-}
-
-#########################
-### Create monitor(s) ###
-#########################
-resource "openstack_lb_monitor_v2" "lb_monitor" {
-  for_each = local.listeners
-
-  pool_id = openstack_lb_pool_v2.lb_pool[each.key].id
-
-  name             = each.value.monitor_name != null ? each.value.monitor_name : format("%s-%s-%s", var.lb_name, "listener", each.key)
-  type             = each.value.monitor_type
-  delay            = each.value.monitor_delay
-  timeout          = each.value.monitor_timeout
-  max_retries      = each.value.monitor_max_retries
-  max_retries_down = each.value.monitor_max_retries_down
-  url_path         = each.value.monitor_url_path
-  http_method      = each.value.monitor_http_method
-  expected_codes   = each.value.monitor_expected_codes
-  admin_state_up   = true
-}
-
-################################
-### Add member(s) to pool(s) ###
-#################################
-resource "openstack_lb_members_v2" "members" {
-  # Only create resource if there are members
-  for_each = { for k, v in local.listeners : k => v if length(v.members) != 0 }
-
-  pool_id = openstack_lb_pool_v2.lb_pool[each.key].id
-
-  dynamic "member" {
-    for_each = each.value.members
-    content {
-      address       = member.value.address
-      protocol_port = member.value.protocol_port
-      subnet_id     = member.value.subnet_id
-      name          = member.value.name
-      weight        = member.value.weight
-      backup        = member.value.backup
-    }
+##################################
+### Create monitor(s) per pool ###
+##################################
+resource "openstack_lb_monitor_v2" "monitor" {
+  for_each = {
+    for pool_key, pool in var.pools : pool_key => pool
+    if try(pool.monitor, null) != null
   }
+  name = coalesce(
+    try(each.value.monitor.name, null),
+    format("lb:%s pool:%s monitor", var.lb_name, each.key)
+  )
+
+  pool_id          = openstack_lb_pool_v2.pool[each.key].id
+  type             = upper(each.value.monitor.type)
+  delay            = each.value.monitor.delay
+  timeout          = each.value.monitor.timeout
+  max_retries      = each.value.monitor.max_retries
+  max_retries_down = try(each.value.monitor.max_retries_down, null)
+  url_path         = try(each.value.monitor.url_path, null)
+  http_method      = try(each.value.monitor.http_method, null)
+  http_version     = try(each.value.monitor.http_version, null)
+  expected_codes   = try(each.value.monitor.expected_codes, null)
+  admin_state_up   = each.value.monitor.admin_state_up
+}
+
+
+############################
+### Add members to pools ###
+############################
+resource "openstack_lb_member_v2" "member" {
+  for_each = local.members_by_key
+
+  name = coalesce(try(each.value.member.name, null), each.key)
+
+  pool_id         = openstack_lb_pool_v2.pool[each.value.pool_key].id
+  address         = each.value.member.address
+  protocol_port   = each.value.member.protocol_port
+  subnet_id       = try(each.value.member.subnet_id, null)
+  weight          = try(each.value.member.weight, null)
+  monitor_port    = try(each.value.member.monitor_port, null)
+  monitor_address = try(each.value.member.monitor_address, null)
+  backup          = try(each.value.member.backup, null)
+  tags            = try(each.value.member.tags, [])
+}
+
+
+#################
+### Listeners ###
+#################
+resource "openstack_lb_listener_v2" "listener" {
+  for_each = var.listeners
+
+  name            = coalesce(try(each.value.name, null), format("lb:%s listener:%s", var.lb_name, each.key))
+  description     = try(each.value.description, null)
+  loadbalancer_id = openstack_lb_loadbalancer_v2.loadbalancer.id
+  protocol        = upper(each.value.protocol)
+  protocol_port   = each.value.protocol_port
+  tags            = each.value.tags
+  admin_state_up  = each.value.admin_state_up
+
+  default_pool_id = try(openstack_lb_pool_v2.pool[each.value.default_pool_key].id, null)
+
+  insert_headers = each.value.insert_headers
+  allowed_cidrs  = each.value.allowed_cidrs
+
+  connection_limit       = try(each.value.connection_limit, null)
+  timeout_client_data    = try(each.value.timeout_client_data, null)
+  timeout_member_connect = try(each.value.timeout_member_connect, null)
+  timeout_member_data    = try(each.value.timeout_member_data, null)
+  timeout_tcp_inspect    = try(each.value.timeout_tcp_inspect, null)
+
+  default_tls_container_ref = try(each.value.default_tls_container_ref, null)
+  sni_container_refs        = try(each.value.sni_container_refs, null)
+  tls_ciphers               = try(each.value.tls_ciphers, null)
+  tls_versions              = try(each.value.tls_versions, null)
+
+  client_authentication       = try(each.value.client_authentication, null)
+  client_ca_tls_container_ref = try(each.value.client_ca_tls_container_ref, null)
+  client_crl_container_ref    = try(each.value.client_crl_container_ref, null)
+}
+
+
+###################
+### L7 Policies ###
+###################
+resource "openstack_lb_l7policy_v2" "policy" {
+  for_each = local.l7policies_by_key
+
+  name = coalesce(
+    try(each.value.policy.name, null),
+    format("lb:%s lsn:%s pol:%s", var.lb_name, each.value.listener_key, each.value.policy_key)
+  )
+  description        = try(each.value.policy.description, null)
+  listener_id        = openstack_lb_listener_v2.listener[each.value.listener_key].id
+  action             = upper(each.value.policy.action)
+  position           = each.value.policy.position
+  redirect_url       = try(each.value.policy.redirect_url, null)
+  redirect_pool_id   = try(openstack_lb_pool_v2.pool[each.value.policy.redirect_pool_key].id, null)
+  redirect_prefix    = try(each.value.policy.redirect_prefix, null)
+  redirect_http_code = try(each.value.policy.redirect_http_code, null)
+  admin_state_up     = each.value.policy.admin_state_up
+}
+
+
+################
+### L7 Rules ###
+################
+resource "openstack_lb_l7rule_v2" "rule" {
+  for_each = local.l7rules_by_key
+
+  # Locate the policy resource by its composite key
+  l7policy_id = openstack_lb_l7policy_v2.policy[each.value.l7policy_key].id
+
+  type         = upper(each.value.rule.type)
+  compare_type = upper(each.value.rule.compare_type)
+  value        = each.value.rule.value
+  key          = try(each.value.rule.key, null)
+  invert       = each.value.rule.invert
 }
