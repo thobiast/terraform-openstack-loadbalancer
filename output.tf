@@ -2,53 +2,59 @@ output "loadbalancer_id" {
   description = "Load balancer ID"
   value       = openstack_lb_loadbalancer_v2.loadbalancer.id
 }
-
-output "loadbalancer_ip" {
-  description = "Load balancer IP address"
+output "vip_address" {
+  description = "Allocated VIP address"
   value       = openstack_lb_loadbalancer_v2.loadbalancer.vip_address
 }
-
-output "loadbalancer_vip_port_id" {
-  description = "The Port ID of the Load Balancer IP"
-  value       = openstack_lb_loadbalancer_v2.loadbalancer.vip_port_id
+output "loadbalancer" {
+  description = "The full OpenStack load balancer resource object"
+  value       = openstack_lb_loadbalancer_v2.loadbalancer
 }
-
-output "loadbalancer_name" {
-  description = "Human-readable name for the Loadbalancer"
-  value       = openstack_lb_loadbalancer_v2.loadbalancer.name
+output "listeners" {
+  description = "A map of all created OpenStack listener resource objects"
+  value       = openstack_lb_listener_v2.listener
 }
-
-output "listener_id" {
-  description = "Listener ID"
-  value       = openstack_lb_listener_v2.listener.id
+output "pools" {
+  description = "A map of all created OpenStack pool resource objects"
+  value       = openstack_lb_pool_v2.pool
 }
-
-output "listener_protocol" {
-  description = "Listener protocol"
-  value       = openstack_lb_listener_v2.listener.protocol
+output "monitors" {
+  description = "A map of all created OpenStack monitor resource objects"
+  value       = openstack_lb_monitor_v2.monitor
 }
-
-output "listener_protocol_port" {
-  description = "The port on which to listen for client traffic"
-  value       = openstack_lb_listener_v2.listener.protocol_port
+output "members" {
+  description = "A map of all created OpenStack member resource objects"
+  value       = openstack_lb_member_v2.member
 }
-
-output "lb_pool_id" {
-  description = "Load balancer pool ID"
-  value       = openstack_lb_pool_v2.lb_pool.id
+output "l7policies" {
+  description = "A map of all created OpenStack L7 policy resource objects"
+  value       = openstack_lb_l7policy_v2.policy
 }
-
-output "member_port" {
-  description = "The port on which to listen for client traffic"
-  value = join(",",
-    distinct([for member in openstack_lb_member_v2.member : member.protocol_port])
-  )
+output "l7rules" {
+  description = "A map of all created OpenStack L7 rule resource objects"
+  value       = openstack_lb_l7rule_v2.rule
 }
-
-output "member_address" {
-  description = "The IP address of the member to receive traffic from the load balancer"
-  value = join(",",
-    [for member in openstack_lb_member_v2.member :
-    member.address]
-  )
+output "listener_ids_by_key" {
+  description = "Map: listener key - listener ID"
+  value       = { for k, v in openstack_lb_listener_v2.listener : k => v.id }
+}
+output "pool_ids_by_key" {
+  description = "Map: pool key - pool ID"
+  value       = { for k, v in openstack_lb_pool_v2.pool : k => v.id }
+}
+output "monitor_ids_by_pool_key" {
+  description = "Map: pool key - monitor ID"
+  value       = { for k, v in openstack_lb_monitor_v2.monitor : k => v.id }
+}
+output "member_ids" {
+  description = "Map: pool/member - member ID"
+  value       = { for k, v in openstack_lb_member_v2.member : k => v.id }
+}
+output "l7policy_ids_by_key" {
+  description = "Map: listener/policy - l7policy ID"
+  value       = { for k, v in openstack_lb_l7policy_v2.policy : k => v.id }
+}
+output "l7rule_ids_by_key" {
+  description = "Map: listener/policy/rule - l7rule ID"
+  value       = { for k, v in openstack_lb_l7rule_v2.rule : k => v.id }
 }
